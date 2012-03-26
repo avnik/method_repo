@@ -17,6 +17,7 @@ install_requires=[
     'six',
     'pyramid',
     'pyramid_zcml',
+    'repoze.tm2',
     'composite.alchemist',
     'repozitory',
     'deform',

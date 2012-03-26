@@ -2,6 +2,12 @@
 
   <!-- this must be included for the view declarations to work -->
   <include package="pyramid_zcml" />
+  <include package="composite.alchemist" />
+
+  <subscriber
+    for="composite.alchemist.interfaces.IDatabaseConfigured"
+    handler=".backend.archive.hook"
+    />
 
   <view
      context=".resources.Root"
