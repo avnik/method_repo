@@ -8,6 +8,10 @@
     for="composite.alchemist.interfaces.IDatabaseConfigured"
     handler=".backend.archive.hook"
     />
+  <utility
+    provides=".interfaces.IBackend"
+    factory=".backend.archive.RepozitoryArchive"
+    />
 
   <view
      context=".resources.Root"
