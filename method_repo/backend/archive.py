@@ -7,6 +7,9 @@ def hook(event):
     log.info("repozitory metadata bound")
 
 class RepozitoryArchive(Archive):
+    def __init__(self):
+        super(RepozitoryArchive, self).__init__(None)
+
     @property
     def session(self):
         return get_session()
