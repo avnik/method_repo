@@ -1,0 +1,7 @@
+Copyright
+---------
+
+All application code (except code under method_repo/libs) licensed under 
+GNU Affero General Public License.
+
+Library code (under method_repo/libs) licensed under BSD-like license.
