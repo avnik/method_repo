@@ -58,7 +58,40 @@ def make_name_validator(content_type):
 def now_default(node, kw):
     return datetime.date.today()
 
+@colander.deferred
+def upload_widget(node, kw):
+    request = kw['request']
+    tmpstore = FileUploadTempStore(request)
+    return deform.widget.FileUploadWidget(tmpstore)
+
 eastern = pytz.timezone('US/Eastern')
+
+class FileUploadSchema(Schema):
+    file = colander.SchemaNode(
+        deform.schema.FileData(),
+        widget = upload_widget,
+        )
+
+class FileUploadPropertySheet(PropertySheet):
+    schema = FileUploadSchema()
+    
+    def get(self):
+        context = self.context
+        filedata = dict(
+            fp=None,
+            uid=str(context.__objectid__),
+            filename='',
+            )
+        return dict(file=filedata)
+    
+    def set(self, struct):
+        context = self.context
+        file = struct['file']
+        if file.get('fp'):
+            fp = file['fp']
+            fp.seek(0)
+            context.upload(fp)
+        
 
 class MethodEntrySchema(Schema):
     name = colander.SchemaNode(
@@ -68,28 +101,26 @@ class MethodEntrySchema(Schema):
     title = colander.SchemaNode(
         colander.String(),
         )
-    entry = colander.SchemaNode(
-        colander.String(),
-        widget = deform.widget.TextAreaWidget(rows=20, cols=10),
-        )
-    format = colander.SchemaNode(
-        colander.String(),
-        validator = colander.OneOf(['rst', 'html']),
-        widget = deform.widget.SelectWidget(
-            values=[('rst', 'rst'), ('html', 'html')]),
-        )
     pubdate = colander.SchemaNode(
        colander.DateTime(default_tzinfo=eastern),
        default = now_default,
        )
+
+class MethodUploadSchema(Schema):
+    name = colander.SchemaNode(
+        colander.String(),
+        validator = make_name_validator(IMethodEntry),
+        )
+    body = colander.SchemaNode(
+        deform.schema.FileData(),
+        widget = upload_widget,
+        )
 
 class MethodEntryPropertySheet(PropertySheet):
     schema = MethodEntrySchema()
     def get(self):
         context = self.context
         return dict(title=context.title,
-                    entry=context.entry,
-                    format=context.format,
                     pubdate=context.pubdate,
                     name=context.__name__)
 
@@ -98,15 +129,13 @@ class MethodEntryPropertySheet(PropertySheet):
         if struct['name'] != context.__name__:
             context.__parent__.rename(context.__name__, struct['name'])
         context.title = struct['title']
-        context.entry = struct['entry']
-        context.format = struct['format']
         context.pubdate = struct['pubdate']
 
 @content(
     IMethodEntry,
     name='Method Entry',
     icon='icon-book',
-    add_view='add_blog_entry',
+    add_view='add_entry',
     propertysheets=(
         ('Basic', MethodEntryPropertySheet),
         ),
@@ -114,15 +143,19 @@ class MethodEntryPropertySheet(PropertySheet):
     tab_order=('properties', 'contents', 'acl_edit'),
     )
 class MethodEntry(Folder):
-    def __init__(self, title, entry, format, pubdate):
+    def __init__(self, body):
         Folder.__init__(self)
         self.modified = datetime.datetime.now()
-        self.title = title
-        self.entry = entry
-        self.pubdate = pubdate
-        self.format = format
+        self.pubdate = datetime.datetime.now()
+        self.title = u""
         self['attachments'] = Folder()
         self['comments'] = Folder()
+        if body.get('fp'):
+            fp = body['fp']
+            fp.seek(0)
+            self.body = File(fp)
+        else:
+            raise RuntimeError("upload failed")
 
     def add_comment(self, comment):
         while 1:
@@ -133,11 +166,6 @@ class MethodEntry(Folder):
 
 _marker = object()
 
-@colander.deferred
-def upload_widget(node, kw):
-    request = kw['request']
-    tmpstore = FileUploadTempStore(request)
-    return deform.widget.FileUploadWidget(tmpstore)
 
 class FilePropertiesSchema(Schema):
     name = colander.SchemaNode(
@@ -168,32 +196,6 @@ class FilePropertySheet(PropertySheet):
         if newname and newname != oldname:
             context.__parent__.rename(oldname, newname)
 
-class FileUploadSchema(Schema):
-    file = colander.SchemaNode(
-        deform.schema.FileData(),
-        widget = upload_widget,
-        )
-
-class FileUploadPropertySheet(PropertySheet):
-    schema = FileUploadSchema()
-    
-    def get(self):
-        context = self.context
-        filedata = dict(
-            fp=None,
-            uid=str(context.__objectid__),
-            filename='',
-            )
-        return dict(file=filedata)
-    
-    def set(self, struct):
-        context = self.context
-        file = struct['file']
-        if file.get('fp'):
-            fp = file['fp']
-            fp.seek(0)
-            context.upload(fp)
-        
 @content(
     IFile,
     icon='icon-file',
@@ -262,7 +264,7 @@ class Comment(Persistent):
         self.pubdate = pubdate
 
 @content(
-    IMethod,
+    IMethodRepo,
     name='Method Repo',
     icon='icon-home',
     propertysheets = (

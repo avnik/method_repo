@@ -1,4 +1,4 @@
-from .resources import Blog
+from .resources import MethodRepo
 from pyramid.config import Configurator
 
 def main(global_config, **settings):

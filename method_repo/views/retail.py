@@ -10,7 +10,7 @@ from pyramid.security import authenticated_userid
 
 from ..resources import (
     IMethodEntry,
-    IMethod,
+    IMethodRepo,
     IFile,
     Comment,
     )
@@ -23,7 +23,7 @@ def _getentrybody(format, entry):
     return body
 
 @view_config(
-    context=IMethod,
+    context=IMethodRepo,
     renderer='templates/frontpage.pt',
     )
 def blogview(context, request):

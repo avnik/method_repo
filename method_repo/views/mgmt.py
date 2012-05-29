@@ -6,18 +6,19 @@ from substanced.interfaces import ISite
 from ..resources import (
     IMethodEntry,
     MethodEntrySchema,
+    MethodUploadSchema,
     )
 
 @mgmt_view(
     context=ISite,
-    name='add_blog_entry',
+    name='add_entry',
     permission='sdi.add-content', 
     renderer='substanced.sdi:templates/form.pt',
     tab_condition=False,
     )
 class AddMethodEntryView(FormView):
     title = 'Add Method Entry'
-    schema = MethodEntrySchema()
+    schema = MethodUploadSchema()
     buttons = ('add',)
 
     def add_success(self, appstruct):

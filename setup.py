@@ -15,9 +15,9 @@ requires = [
     'pyramid_tm',
     ]
 
-setup(name='blog',
+setup(name='method_repo',
       version='0.0',
-      description=' Substance D Demo Blog',
+      description='Method repo',
       long_description=README + '\n\n' +  CHANGES,
       classifiers=[
         "Development Status :: 3 - Alpha",
