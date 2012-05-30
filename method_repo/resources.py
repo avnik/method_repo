@@ -33,6 +33,8 @@ from .interfaces import (
     IFile,
     )
 
+from .logic import MethodEditor
+
 def make_name_validator(content_type):
     @colander.deferred
     def name_validator(node, kw):
@@ -143,6 +145,7 @@ class MethodEntryPropertySheet(PropertySheet):
     tab_order=('properties', 'contents', 'acl_edit'),
     )
 class MethodEntry(Folder):
+    __addable__ = ()
     def __init__(self, body):
         Folder.__init__(self)
         self.modified = datetime.datetime.now()
@@ -150,6 +153,7 @@ class MethodEntry(Folder):
         self.title = u""
         self['attachments'] = Folder()
         self['comments'] = Folder()
+        self['editor'] = MethodEditor()
         if body.get('fp'):
             fp = body['fp']
             fp.seek(0)

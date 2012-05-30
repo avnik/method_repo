@@ -9,3 +9,9 @@ class IMethodEntry(Interface):
 
 class IComment(Interface):
     pass
+
+class IVirtualSection(Interface):
+    pass
+
+class IVirtualList(Interface):
+    pass

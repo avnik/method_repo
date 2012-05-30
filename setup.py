@@ -13,6 +13,8 @@ requires = [
     'docutils',
     'pytz',
     'pyramid_tm',
+    'zope.schema',
+    'six',
     ]
 
 setup(name='method_repo',
