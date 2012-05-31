@@ -19,7 +19,7 @@ class ParsedDocumentProxy(object):
         self.config.set(self.section, key, value)
 
     def __contains__(self, key):
-        return self.parser.has_option(self.section, key)
+        return self.config.has_option(self.section, key)
 
 class ParsedDocument(object):
     def __init__(self, blob, encoding=None):

@@ -1,11 +1,15 @@
 from persistent import Persistent
 from zope.interface import implementer, Interface, Attribute
-from zope.schema import getFieldNamesInOrder, Object, List
+from zope.schema import getFieldNamesInOrder
+from zope.schema.interfaces import IObject, IContainer
 from substanced.interfaces import IFolder
 from substanced.content import content
 from .interfaces import IMethodEntry, IVirtualSection, IVirtualList
 from .schema import IMethodConfigurationSchema
 from .parser import ParsedDocument
+
+def compound_field(field):
+    return IContainer.providedBy(field) or IObject.providedBy(field)
 
 class CommonBullshit(object):
     def get(self, name, default=None):
@@ -19,6 +23,10 @@ class CommonBullshit(object):
         for each in self.keys():
             yield self[each]
 
+    def exists(self, key):
+        """For both VirtualSection and VirtualList, but not for root"""
+        return key in self.context[self.__name__]
+
 @content(IVirtualList)
 @implementer(IFolder)
 class VirtualList(CommonBullshit):
@@ -28,12 +36,12 @@ class VirtualList(CommonBullshit):
         self.__parent__ = parent
         self.context = context
         self.schema = schema
-        items = context[name]
+        items = context[parent.__name__][name]
         self._items = map(lambda x: x.strip(), items.split(', '))
 
     def __getitem__(self, key):
         if key in self._items:
-            return VirtualSection(self, key, self.context, self.schema.value_type)
+            return VirtualSection(self, key, self.context, self.schema.schema)
         raise KeyError(key)
 
     def keys(self):
@@ -51,15 +59,15 @@ class VirtualSection(CommonBullshit):
         self.__name__ = name
         self.__parent__ = parent
         self.context = context
-        if isinstance(schema, Object):
+        if IObject.providedBy(schema):
             schema = schema.schema
         self.schema = schema
 
     def keys(self):
         for each in getFieldNamesInOrder(self.schema):
             field = self.schema[each]
-            if isinstance(each, List):
-                if each in self.context:
+            if compound_field(field):
+                if self.exists(each):
                     yield each
 
     def items(self):
@@ -68,8 +76,10 @@ class VirtualSection(CommonBullshit):
     
     def __getitem__(self, key):
         field = self.schema[key]
-        if isinstance(field, List):
+        if IContainer.providedBy(field):
             return VirtualList(self, key, self.context, field.value_type)
+        elif IObject.providedBy(field):
+            return VirtualSection(self, key, self.context, field.schema)
         raise KeyError(key)
         
 
@@ -82,6 +92,9 @@ class MethodEditor(VirtualSection, Persistent):
     @property
     def schema(self):
         return IMethodConfigurationSchema
+
+    def exists(self, key):
+        return key in self.context
 
     @property
     def context(self):
