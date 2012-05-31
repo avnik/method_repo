@@ -1,15 +1,41 @@
 from persistent import Persistent
 from zope.interface import implementer, Interface, Attribute
-from zope.schema import getFieldNamesInOrder
+from zope.schema import getFieldNamesInOrder, getFieldsInOrder
 from zope.schema.interfaces import IObject, IContainer
-from substanced.interfaces import IFolder
+from substanced.interfaces import IFolder, IPropertySheet, IPropertied
 from substanced.content import content
+from substanced.property import PropertySheet
 from .interfaces import IMethodEntry, IVirtualSection, IVirtualList
 from .schema import IMethodConfigurationSchema
 from .parser import ParsedDocument
+from .converter import convertToColander
+from substanced.schema import Schema
 
 def compound_field(field):
     return IContainer.providedBy(field) or IObject.providedBy(field)
+
+@implementer(IPropertySheet)
+class ZopeSchemaSheet(PropertySheet):
+    @property
+    def schema(self):
+        nodes = convertToColander(self.context.properties())
+        print repr(nodes)
+        return Schema(name="Generated", children=nodes)
+
+    def get(self):
+        d = dict()
+        for each in self.context.properties():
+            d[each.__name__] = self.context.section[each.__name__]
+        print repr(d)
+        return d
+
+    def set(self, struct):
+        for k in struct:
+            self.context.section[k] = struct[l]
+
+    def after_set(self):
+        super(ZopeSchemaSheet, self).after_set()
+        self.context.context.flush()
 
 class CommonBullshit(object):
     def get(self, name, default=None):
@@ -27,7 +53,28 @@ class CommonBullshit(object):
         """For both VirtualSection and VirtualList, but not for root"""
         return key in self.context[self.__name__]
 
-@content(IVirtualList)
+    @property
+    def section(self):
+        return self.context[self.__name__]
+
+    def keys(self):
+        for each in getFieldNamesInOrder(self.schema):
+            field = self.schema[each]
+            if compound_field(field):
+                if self.exists(each):
+                    yield each
+
+    def properties(self):
+        for name, field in getFieldsInOrder(self.schema):
+            if not compound_field(field):
+                if self.exists(name):
+                    yield field
+
+        
+
+@content(IVirtualList,
+    propertysheets=[('Basic', ZopeSchemaSheet),]
+    )
 @implementer(IFolder)
 class VirtualList(CommonBullshit):
     __addable__ = ()
@@ -51,7 +98,9 @@ class VirtualList(CommonBullshit):
         for each in self.keys():
             yield each, self[each]
 
-@content(IVirtualSection)
+@content(IVirtualSection,
+    propertysheets=[('Basic', ZopeSchemaSheet),]
+    )
 @implementer(IFolder)
 class VirtualSection(CommonBullshit):
     __addable__ = ()
@@ -62,13 +111,6 @@ class VirtualSection(CommonBullshit):
         if IObject.providedBy(schema):
             schema = schema.schema
         self.schema = schema
-
-    def keys(self):
-        for each in getFieldNamesInOrder(self.schema):
-            field = self.schema[each]
-            if compound_field(field):
-                if self.exists(each):
-                    yield each
 
     def items(self):
         for each in self.keys():
@@ -99,7 +141,7 @@ class MethodEditor(VirtualSection, Persistent):
     @property
     def context(self):
         if not self._v_context:
-            self._v_context = ParsedDocument(self.__parent__.body.blob.open('r'))
+            self._v_context = ParsedDocument(self.__parent__.body.blob)
         return self._v_context
 
     def __init__(self):

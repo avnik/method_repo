@@ -22,7 +22,10 @@ class ParsedDocumentProxy(object):
         return self.config.has_option(self.section, key)
 
 class ParsedDocument(object):
-    def __init__(self, blob, encoding=None):
+    def __init__(self, zodb_blob, encoding=None):
+        self.zodb_blob = zodb_blob
+        blob = zodb_blob.open('r')
+
         if not encoding:
             encoding = snoop_encoding(blob)
 
@@ -33,6 +36,14 @@ class ParsedDocument(object):
         self.parser = configparser.ConfigParser()
         self.parser.readfp(blob)
         self.encoding = encoding
+        blob.close()
+
+    def flush(self):
+        blob = self.zodb_blob.open('w')
+        if not self.encoding == "utf-8":
+            blob = EncodedFile(blob, "utf-8", self.encoding)
+        self.parser.write(blob)
+        blob.close()
 
     def __contains__(self, key):
         return self.parser.has_section(key)
