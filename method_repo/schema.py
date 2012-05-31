@@ -15,14 +15,18 @@ class IMethodConfigurationHeader(Interface):
     producer = TextLine(title=u"Lot producer")
     name = TextLine(title=u"name") 
 
-class ITechprocess(Interface):
+class ITechprocessStep(Interface):
     title = TextLine(title=u"Title")  
     text = Text(title=u"Description")
     duration = BytesLine(title=u"Duration")
+
+class ITechprocess(Interface):
+    steps = List(title=u"Techprocesses steps",
+        value_type=Object(title=u"Techproces", schema=ITechprocessStep))
 
 class IMethodConfigurationSchema(Interface):
     config = Object(title=u"Magic header", schema=IMethodConfigurationMagic)
     header = Object(title=u"Header for humans",
         schema=IMethodConfigurationHeader)
-    techprocess = List(title=u"Techprocesses list",
-        value_type=Object(title=u"Techproces", schema=ITechprocess))
+    techprocess = Object(title=u"Techprocesses list",
+        schema=ITechprocess)
